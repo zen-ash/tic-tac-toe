@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Neon Tic Tac Toe</title>
+  <meta name="description" content="A glowing, animated tic tac toe game with an unbeatable AI." />
+  <meta name="theme-color" content="#07051a" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%2307051a'/%3E%3Cpath d='M22 22L46 46M46 22L22 46' stroke='%23ff3d8b' stroke-width='9' stroke-linecap='round'/%3E%3Ccircle cx='68' cy='68' r='13' fill='none' stroke='%2322d3ee' stroke-width='9'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Shared gradients for the X and O strokes -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="gx" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#ff3d8b" />
+        <stop offset="1" stop-color="#ffa3cd" />
+      </linearGradient>
+      <linearGradient id="go" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#22d3ee" />
+        <stop offset="1" stop-color="#b4f6ff" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <div class="bg" aria-hidden="true">
+    <span class="orb o1"></span>
+    <span class="orb o2"></span>
+    <span class="orb o3"></span>
+  </div>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+
+  <main class="app">
+    <header class="top">
+      <h1 class="logo"><span class="t1">Tic</span><span class="t2">Tac</span><span class="t3">Toe</span></h1>
+      <button id="sound" class="icon-btn" type="button" aria-label="Toggle sound"></button>
+    </header>
+
+    <section class="controls">
+      <div class="seg" id="mode" role="group" aria-label="Game mode">
+        <span class="seg-thumb" aria-hidden="true"></span>
+        <button type="button" data-value="ai">vs Computer</button>
+        <button type="button" data-value="pvp">2 Players</button>
+      </div>
+      <div class="collapse" id="difficulty-wrap">
+        <div>
+          <div class="seg seg-sm" id="difficulty" role="group" aria-label="Difficulty">
+            <span class="seg-thumb" aria-hidden="true"></span>
+            <button type="button" data-value="easy">Easy</button>
+            <button type="button" data-value="medium">Medium</button>
+            <button type="button" data-value="hard">Unbeatable</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="scoreboard" aria-label="Score">
+      <div class="score x" id="score-x">
+        <span class="label"><i class="dot"></i><span id="label-x">You</span></span>
+        <span class="value" id="value-x">0</span>
+      </div>
+      <div class="score draw" id="score-draw">
+        <span class="label">Draws</span>
+        <span class="value" id="value-draw">0</span>
+      </div>
+      <div class="score o" id="score-o">
+        <span class="label"><span id="label-o">AI</span><i class="dot"></i></span>
+        <span class="value" id="value-o">0</span>
+      </div>
+    </section>
+
+    <p class="status" id="status" aria-live="polite"></p>
+
+    <div class="board-wrap">
+      <div class="board" id="board" aria-label="Game board"></div>
+      <svg class="win-line" id="winline" aria-hidden="true"></svg>
+      <div class="result" id="result" aria-hidden="true">
+        <div class="result-mark" id="result-mark"></div>
+        <h2 id="result-title"></h2>
+        <p id="result-sub"></p>
+        <button class="btn primary" id="again" type="button">Play again</button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn primary" id="restart" type="button">New Round</button>
+      <button class="btn ghost" id="reset" type="button">Reset Scores</button>
+    </div>
+
+    <p class="hint">Press <kbd>1</kbd>–<kbd>9</kbd> to place a mark · <kbd>R</kbd> for a new round</p>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
