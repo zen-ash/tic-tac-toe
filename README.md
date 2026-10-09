@@ -1,5 +1,7 @@
 # Neon Tic Tac Toe
 
+**Play it live: https://tic-tac-toe-seven-chi-77.vercel.app**
+
 A glowing, animated take on tic tac toe. It's plain HTML, CSS and JavaScript with no build step and no dependencies.
 
 ## Features
