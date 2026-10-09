@@ -3,52 +3,41 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Neon Tic Tac Toe</title>
-  <meta name="description" content="A glowing, animated tic tac toe game with an unbeatable AI." />
-  <meta name="theme-color" content="#07051a" />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%2307051a'/%3E%3Cpath d='M22 22L46 46M46 22L22 46' stroke='%23ff3d8b' stroke-width='9' stroke-linecap='round'/%3E%3Ccircle cx='68' cy='68' r='13' fill='none' stroke='%2322d3ee' stroke-width='9'/%3E%3C/svg%3E" />
+  <title>Tic Tac Toe</title>
+  <meta name="description" content="A quiet, beautifully drawn game of tic tac toe, with an unbeatable opponent." />
+  <meta name="theme-color" content="#f3f0e7" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23f3f0e7'/%3E%3Cpath d='M24 24L46 46M46 24L24 46' stroke='%231a1915' stroke-width='6' stroke-linecap='round'/%3E%3Ccircle cx='66' cy='66' r='13' fill='none' stroke='%23c15f3c' stroke-width='6'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300..500;1,6..72,300..500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Shared gradients for the X and O strokes -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
-    <defs>
-      <linearGradient id="gx" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#ff3d8b" />
-        <stop offset="1" stop-color="#ffa3cd" />
-      </linearGradient>
-      <linearGradient id="go" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#22d3ee" />
-        <stop offset="1" stop-color="#b4f6ff" />
-      </linearGradient>
-    </defs>
-  </svg>
-
-  <div class="bg" aria-hidden="true">
-    <span class="orb o1"></span>
-    <span class="orb o2"></span>
-    <span class="orb o3"></span>
-  </div>
+  <div class="grain" aria-hidden="true"></div>
   <canvas id="confetti" aria-hidden="true"></canvas>
 
   <main class="app">
-    <header class="top">
-      <h1 class="logo"><span class="t1">Tic</span><span class="t2">Tac</span><span class="t3">Toe</span></h1>
+    <header class="masthead reveal" style="--r:0">
+      <p class="eyebrow">A Parlour Game &middot; Est. MMXXVI</p>
+      <h1>Tic <em>Tac</em> Toe</h1>
       <button id="sound" class="icon-btn" type="button" aria-label="Toggle sound"></button>
     </header>
 
-    <section class="controls">
-      <div class="seg" id="mode" role="group" aria-label="Game mode">
+    <div class="ornament reveal" style="--r:1" aria-hidden="true">
+      <span></span>
+      <svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20M4.9 4.9l14.2 14.2M19.1 4.9 4.9 19.1" /></svg>
+      <span></span>
+    </div>
+
+    <nav class="controls reveal" style="--r:2">
+      <div class="tabs" id="mode" role="group" aria-label="Game mode">
         <span class="seg-thumb" aria-hidden="true"></span>
-        <button type="button" data-value="ai">vs Computer</button>
-        <button type="button" data-value="pvp">2 Players</button>
+        <button type="button" data-value="ai">Versus Computer</button>
+        <button type="button" data-value="pvp">Two Players</button>
       </div>
       <div class="collapse" id="difficulty-wrap">
         <div>
-          <div class="seg seg-sm" id="difficulty" role="group" aria-label="Difficulty">
+          <div class="tabs tabs-serif" id="difficulty" role="group" aria-label="Difficulty">
             <span class="seg-thumb" aria-hidden="true"></span>
             <button type="button" data-value="easy">Easy</button>
             <button type="button" data-value="medium">Medium</button>
@@ -56,42 +45,48 @@
           </div>
         </div>
       </div>
-    </section>
+    </nav>
 
-    <section class="scoreboard" aria-label="Score">
+    <section class="ledger reveal" style="--r:3" aria-label="Score">
       <div class="score x" id="score-x">
-        <span class="label"><i class="dot"></i><span id="label-x">You</span></span>
+        <span class="label" id="label-x">You</span>
         <span class="value" id="value-x">0</span>
       </div>
       <div class="score draw" id="score-draw">
-        <span class="label">Draws</span>
+        <span class="label">Drawn</span>
         <span class="value" id="value-draw">0</span>
       </div>
       <div class="score o" id="score-o">
-        <span class="label"><span id="label-o">AI</span><i class="dot"></i></span>
+        <span class="label" id="label-o">Computer</span>
         <span class="value" id="value-o">0</span>
       </div>
     </section>
 
-    <p class="status" id="status" aria-live="polite"></p>
+    <p class="status reveal" style="--r:4" id="status" aria-live="polite"></p>
 
-    <div class="board-wrap">
+    <div class="board-wrap reveal" style="--r:5">
+      <svg class="grid-lines" viewBox="0 0 300 300" aria-hidden="true">
+        <path pathLength="1" d="M100 10C99 80 101 200 100 290" />
+        <path pathLength="1" d="M200 12C201 100 199 210 200 288" />
+        <path pathLength="1" d="M10 100C90 101 210 99 290 100" />
+        <path pathLength="1" d="M12 200C100 199 200 201 288 200" />
+      </svg>
       <div class="board" id="board" aria-label="Game board"></div>
       <svg class="win-line" id="winline" aria-hidden="true"></svg>
       <div class="result" id="result" aria-hidden="true">
         <div class="result-mark" id="result-mark"></div>
         <h2 id="result-title"></h2>
         <p id="result-sub"></p>
-        <button class="btn primary" id="again" type="button">Play again</button>
+        <button class="btn primary" id="again" type="button">Play again <span class="arrow">&rarr;</span></button>
       </div>
     </div>
 
-    <div class="actions">
-      <button class="btn primary" id="restart" type="button">New Round</button>
-      <button class="btn ghost" id="reset" type="button">Reset Scores</button>
+    <div class="actions reveal" style="--r:6">
+      <button class="btn primary" id="restart" type="button">New round <span class="arrow">&rarr;</span></button>
+      <button class="btn ghost" id="reset" type="button">Reset scores</button>
     </div>
 
-    <p class="hint">Press <kbd>1</kbd>–<kbd>9</kbd> to place a mark · <kbd>R</kbd> for a new round</p>
+    <p class="hint reveal" style="--r:7">Keys <kbd>1</kbd>&ndash;<kbd>9</kbd> place a mark &middot; <kbd>R</kbd> begins a new round</p>
   </main>
 
   <script src="script.js"></script>

@@ -61,43 +61,79 @@
 
   const sfx = (() => {
     let ctx;
-    function tone(freq, { dur = 0.15, type = 'sine', vol = 0.12, at = 0, slide } = {}) {
-      if (!state.sound) return;
+    let noise;
+
+    function audio() {
+      if (!state.sound) return null;
       try {
         ctx ??= new (window.AudioContext || window.webkitAudioContext)();
         if (ctx.state === 'suspended') ctx.resume();
-        const t = ctx.currentTime + at;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(freq, t);
-        if (slide) osc.frequency.exponentialRampToValueAtTime(slide, t + dur);
+        return ctx;
+      } catch {
+        return null;
+      }
+    }
+
+    // Soft, piano-ish note: a sine with a faint octave overtone and a long tail.
+    function note(freq, { at = 0, dur = 1.2, vol = 0.05 } = {}) {
+      const ac = audio();
+      if (!ac) return;
+      const t = ac.currentTime + at;
+      [[freq, vol], [freq * 2, vol * 0.18]].forEach(([f, v]) => {
+        const osc = ac.createOscillator();
+        const gain = ac.createGain();
+        osc.frequency.value = f;
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+        gain.gain.exponentialRampToValueAtTime(v, t + 0.015);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
+        osc.connect(gain).connect(ac.destination);
         osc.start(t);
         osc.stop(t + dur + 0.05);
-      } catch {}
+      });
     }
+
+    // Filtered noise burst, like a nib dragging across paper.
+    function scratch({ freq = 2600, dur = 0.12, vol = 0.07, at = 0 } = {}) {
+      const ac = audio();
+      if (!ac) return;
+      if (!noise) {
+        noise = ac.createBuffer(1, ac.sampleRate * 0.5, ac.sampleRate);
+        const data = noise.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      }
+      const t = ac.currentTime + at;
+      const src = ac.createBufferSource();
+      const filter = ac.createBiquadFilter();
+      const gain = ac.createGain();
+      src.buffer = noise;
+      filter.type = 'bandpass';
+      filter.frequency.value = freq;
+      filter.Q.value = 0.9;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(filter).connect(gain).connect(ac.destination);
+      src.start(t, Math.random() * 0.3);
+      src.stop(t + dur + 0.02);
+    }
+
     return {
       place: (p) => (p === 'X'
-        ? tone(620, { type: 'triangle', slide: 920, dur: 0.14 })
-        : tone(480, { type: 'sine', slide: 340, dur: 0.2, vol: 0.16 })),
-      click: () => tone(1400, { dur: 0.04, type: 'square', vol: 0.025 }),
-      win: () => [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, { at: i * 0.09, dur: 0.32, type: 'triangle', vol: 0.12 })),
-      lose: () => [392, 329.63, 261.63].forEach((f, i) => tone(f, { at: i * 0.15, dur: 0.38, type: 'sawtooth', vol: 0.045 })),
-      draw: () => [440, 415.3].forEach((f, i) => tone(f, { at: i * 0.13, dur: 0.26, vol: 0.1 })),
+        ? (scratch({ dur: 0.1 }), scratch({ dur: 0.1, at: 0.22, freq: 2900 }))
+        : scratch({ dur: 0.32, freq: 2100, vol: 0.06 })),
+      click: () => scratch({ freq: 4200, dur: 0.035, vol: 0.04 }),
+      win: () => [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => note(f, { at: i * 0.11, dur: 1.6 })),
+      lose: () => [440, 349.23, 293.66].forEach((f, i) => note(f, { at: i * 0.18, dur: 1.4, vol: 0.045 })),
+      draw: () => [392, 523.25].forEach((f, i) => note(f, { at: i * 0.16, dur: 1.3, vol: 0.045 })),
     };
   })();
 
-  // ---------- Confetti ----------
+  // ---------- Paper flutter ----------
 
   const confetti = (() => {
     const canvas = $('#confetti');
     const ctx = canvas.getContext('2d');
-    const colors = ['#ff3d8b', '#22d3ee', '#8b5cf6', '#fbbf24', '#ffffff', '#a3e635'];
+    const colors = ['#c15f3c', '#1a1915', '#b08d57', '#7d8b6a', '#d9cfb6', '#c15f3c'];
     let parts = [];
     let raf = 0;
     let dpr = 1;
@@ -113,20 +149,18 @@
     function burst() {
       if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       const w = innerWidth;
-      const h = innerHeight;
-      for (let k = 0; k < 180; k++) {
-        const left = k % 2 === 0;
+      for (let k = 0; k < 90; k++) {
         parts.push({
-          x: left ? -10 : w + 10,
-          y: h * 0.7,
-          vx: (left ? 1 : -1) * (3 + Math.random() * 10),
-          vy: -(8 + Math.random() * 13),
-          w: 6 + Math.random() * 7,
-          h: 9 + Math.random() * 9,
+          x: Math.random() * w,
+          y: -20 - Math.random() * innerHeight * 0.6,
+          vy: 0.9 + Math.random() * 1.4,
+          sway: 0.6 + Math.random() * 1.2,
+          phase: Math.random() * Math.PI * 2,
+          w: 5 + Math.random() * 6,
+          h: 8 + Math.random() * 8,
           rot: Math.random() * Math.PI * 2,
-          vr: (Math.random() - 0.5) * 0.35,
+          vr: (Math.random() - 0.5) * 0.06,
           color: colors[k % colors.length],
-          round: Math.random() < 0.3,
           life: 0,
         });
       }
@@ -136,28 +170,19 @@
     function tick() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, innerWidth, innerHeight);
-      parts = parts.filter((p) => p.y < innerHeight + 40 && p.life < 360);
+      parts = parts.filter((p) => p.y < innerHeight + 30);
       for (const p of parts) {
         p.life++;
-        p.vy += 0.3;
-        p.vx *= 0.99;
-        p.vy *= 0.99;
-        p.x += p.vx;
         p.y += p.vy;
+        p.x += Math.sin(p.phase + p.life * 0.03) * p.sway;
         p.rot += p.vr;
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.rot);
-        ctx.globalAlpha = Math.min(1, (360 - p.life) / 60);
+        ctx.globalAlpha = 0.85;
         ctx.fillStyle = p.color;
-        if (p.round) {
-          ctx.beginPath();
-          ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
-          ctx.fill();
-        } else {
-          ctx.scale(1, Math.cos(p.life * 0.15));
-          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-        }
+        ctx.scale(Math.cos(p.phase + p.life * 0.05), 1);
+        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
         ctx.restore();
       }
       raf = parts.length ? requestAnimationFrame(tick) : 0;
@@ -229,10 +254,22 @@
 
   // ---------- Rendering helpers ----------
 
-  function markSVG(p, cls = '') {
+  // Slightly irregular paths so the marks read as hand-drawn with a pen.
+  function markSVG(p) {
     return p === 'X'
-      ? `<svg viewBox="0 0 100 100" class="x-mark ${cls}" aria-hidden="true"><path class="mark x" pathLength="1" d="M22 22L78 78"/><path class="mark x second" pathLength="1" d="M78 22L22 78"/></svg>`
-      : `<svg viewBox="0 0 100 100" class="o-mark ${cls}" aria-hidden="true"><path class="mark o" pathLength="1" d="M50 20a30 30 0 1 1 0 60a30 30 0 1 1 0-60"/></svg>`;
+      ? '<svg viewBox="0 0 100 100" aria-hidden="true"><path class="mark x" pathLength="1" d="M27 25C42 41 58 57 75 76"/><path class="mark x second" pathLength="1" d="M74 26C57 42 43 58 26 75"/></svg>'
+      : '<svg viewBox="0 0 100 100" aria-hidden="true"><path class="mark o" pathLength="1" d="M58 23C40 19 23 31 23 51C23 68 36 78 51 78C67 78 78 66 77 49C76 33 64 22 47 24"/></svg>';
+  }
+
+  function burstSVG(p) {
+    const rays = Array.from({ length: 16 }, (_, k) => {
+      const a = (k / 16) * Math.PI * 2;
+      const r1 = k % 2 ? 62 : 56;
+      const r2 = k % 2 ? 74 : 82;
+      const pt = (r) => `${(85 + Math.cos(a) * r).toFixed(1)} ${(85 + Math.sin(a) * r).toFixed(1)}`;
+      return `<path pathLength="1" d="M${pt(r1)}L${pt(r2)}"/>`;
+    }).join('');
+    return `<svg class="burst ${p.toLowerCase()}" viewBox="0 0 170 170" aria-hidden="true">${rays}</svg>`;
   }
 
   const ICON_SOUND_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>';
@@ -284,28 +321,30 @@
     el.classList.add('bump');
   }
 
+  const SIDE = { X: 'Crosses', O: 'Noughts' };
+
   function statusHTML() {
     const ai = state.mode === 'ai';
-    const who = (p) => `<span class="who-${p.toLowerCase()}">${p}</span>`;
+    const who = (p, text = SIDE[p]) => `<span class="who-${p.toLowerCase()}">${text}</span>`;
     if (state.over) {
       const r = getResult(state.board);
-      if (!r.player) return "It's a draw!";
-      if (ai) return r.player === 'X' ? `${who('X')} You win!` : `${who('O')} Computer wins`;
-      return `Player ${who(r.player)} wins!`;
+      if (!r.player) return 'Honours even.';
+      if (ai) return r.player === 'X' ? 'Well played.' : 'The computer takes it.';
+      return `${who(r.player)} take the game.`;
     }
     if (ai) {
       return state.turn === 'X'
-        ? `Your move ${who('X')}`
-        : `Computer is thinking<span class="thinking"><span>.</span><span>.</span><span>.</span></span>`;
+        ? `Your move, ${who('X', 'Crosses')}.`
+        : 'The computer considers<span class="ellipsis"><span>.</span><span>.</span><span>.</span></span>';
     }
-    return `Player ${who(state.turn)}'s turn`;
+    return `${who(state.turn)} to play.`;
   }
 
   function render() {
     const ai = state.mode === 'ai';
     const s = scores();
-    $('#label-x').textContent = ai ? 'You' : 'Player X';
-    $('#label-o').textContent = ai ? 'Computer' : 'Player O';
+    $('#label-x').textContent = ai ? 'You' : 'Crosses';
+    $('#label-o').textContent = ai ? 'Computer' : 'Noughts';
     $('#value-x').textContent = s.X;
     $('#value-o').textContent = s.O;
     $('#value-draw').textContent = s.draw;
@@ -317,7 +356,13 @@
     boardEl.classList.toggle('turn-o', state.turn === 'O');
     boardEl.classList.toggle('locked', state.over || state.busy || isAiTurn());
 
-    statusEl.innerHTML = statusHTML();
+    const html = statusHTML();
+    if (statusEl.innerHTML !== html) {
+      statusEl.innerHTML = html;
+      statusEl.classList.remove('swap');
+      void statusEl.offsetWidth;
+      statusEl.classList.add('swap');
+    }
 
     const soundBtn = $('#sound');
     soundBtn.innerHTML = state.sound ? ICON_SOUND_ON : ICON_SOUND_OFF;
@@ -343,7 +388,10 @@
     x2 += ux * ext; y2 += uy * ext;
     lineSvg.classList.toggle('instant', instant);
     lineSvg.setAttribute('viewBox', `0 0 ${wr.width} ${wr.height}`);
-    lineSvg.innerHTML = `<line class="${player.toLowerCase()}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" style="--len:${len + ext * 2}"/>`;
+    // A gentle bow in the middle keeps the strike looking hand-drawn.
+    const mx = (x1 + x2) / 2 - uy * 4;
+    const my = (y1 + y2) / 2 + ux * 4;
+    lineSvg.innerHTML = `<path class="${player.toLowerCase()}" d="M${x1} ${y1}Q${mx} ${my} ${x2} ${y2}" style="--len:${len + ext * 2 + 4}"/>`;
   }
 
   function showResult(r) {
@@ -354,23 +402,23 @@
 
     if (r.player) {
       markEl.className = 'result-mark';
-      markEl.innerHTML = markSVG(r.player);
-      title.className = r.player.toLowerCase();
+      markEl.innerHTML = burstSVG(r.player) + markSVG(r.player);
+      title.className = r.player === 'X' ? 'x-won' : '';
       if (ai) {
-        title.textContent = r.player === 'X' ? 'You win!' : 'Computer wins';
+        title.innerHTML = r.player === 'X' ? 'You <em>win.</em>' : 'The machine <em>prevails.</em>';
         sub.textContent = r.player === 'X'
-          ? (state.difficulty === 'easy' ? 'Nicely done. Try a harder level?' : 'Outsmarted the machine!')
-          : 'The machine prevails. Rematch?';
+          ? (state.difficulty === 'easy' ? 'A fine start · Perhaps a harder level' : 'Splendidly done')
+          : 'A rematch, perhaps';
       } else {
-        title.textContent = `${r.player} wins!`;
-        sub.textContent = `Player ${other(r.player)}, want revenge?`;
+        title.innerHTML = `${SIDE[r.player]} <em>win.</em>`;
+        sub.textContent = `${SIDE[other(r.player)]} may demand a rematch`;
       }
     } else {
       markEl.className = 'result-mark pair';
       markEl.innerHTML = markSVG('X') + markSVG('O');
-      title.className = 'draw';
-      title.textContent = "It's a draw";
-      sub.textContent = ai && state.difficulty === 'hard' ? "That's the best anyone can do here." : 'Evenly matched.';
+      title.className = '';
+      title.innerHTML = 'A <em>draw.</em>';
+      sub.textContent = ai && state.difficulty === 'hard' ? 'The best anyone can do here' : 'Evenly matched';
     }
 
     resultEl.classList.add('show');
@@ -439,7 +487,6 @@
     } else {
       s.draw++;
       bump('draw');
-      boardEl.classList.add('shake');
       sfx.draw();
     }
 
